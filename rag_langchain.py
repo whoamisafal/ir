@@ -30,7 +30,7 @@ class RAGSystem:
             port=6333
         )
         
-        self.collection_name = "documents"
+        self.collection_name = "documents1"
         self.vector_store = None
         self._create_collection_if_not_exists()
 
@@ -128,4 +128,61 @@ class RAGSystem:
             "answer": result["answer"],
             "context": result["context"]
         }
+            
+    def qdrant_query_unique(self, question, top_k=5, fetch_k=30):
+        """
+        fetch_k: how many raw chunks to fetch from Qdrant before deduplication
+        top_k: final number of unique documents (URLs)
+        """
 
+        embedding = self.embeddings.embed_query(question)
+        
+        # Qdrant query_points returns a QueryResponse object or a tuple 
+        # based on the specific client version/method used.
+        response = self.qdrant_client.query_points(
+            collection_name=self.collection_name,
+            query=embedding,
+            limit=fetch_k,
+            with_payload=True
+        )
+
+        # UNPACKING: If response is ('points', [...]), we take index 1.
+        # Otherwise, we check if it has a .points attribute.
+        if isinstance(response, tuple):
+            points = response[1]
+        elif hasattr(response, 'points'):
+            points = response.points
+        else:
+            points = response
+
+        unique_results = []
+        seen_urls = set()
+
+        for r in points:
+            payload = r.payload or {}
+            metadata = payload.get("metadata", {})
+            
+            # ROBUS URL EXTRACTION: Handles 'url', 'url ', or 'url\xa0'
+            url = None
+            for k, v in metadata.items():
+                if k.strip() == "url":
+                    url = v
+                    break
+
+            if not url or url in seen_urls:
+                continue
+
+            seen_urls.add(url)
+
+            unique_results.append({
+                "url": url,
+                "title": url.split('/')[-1] if url else "Untitled", # Useful for the frontend
+                "description": payload.get("page_content", ""),
+                "visible_text": payload.get("page_content", ""), # Match your HTML requirement
+                "score": float(r.score)
+            })
+
+            if len(unique_results) >= top_k:
+                break
+
+        return unique_results

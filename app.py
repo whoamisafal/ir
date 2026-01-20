@@ -31,9 +31,43 @@ app = Flask(__name__)
 # -----------------------------
 # Search function
 # -----------------------------
-def search(query, top_k=5):
-    result = hybrid_search(query=query,top_k=top_k)
-    return result
+# def search(query, top_k=5):
+#     result = hybrid_search(query=query,top_k=top_k)
+#     return result
+
+def search(query, top_k=5, method="bm25"):
+    """
+    Perform search using either keyword (BM25) or vector (semantic) search.
+    
+    Parameters:
+        query (str): user query
+        top_k (int): number of final results to return
+        method (str): 'bm25' for keyword search, 'vector' for semantic search
+    
+    Returns:
+        List of dicts with keys: url, title/description/page_content, score
+    """
+    if not query:
+        return []
+
+    unique_results = []
+
+    # ----------------------
+    # 1️⃣ Keyword search (BM25)
+    # ----------------------
+    if method.lower() == "bm25":
+        unique_results = hybrid_search(query=query,top_k=top_k)
+
+    # ----------------------
+    # 2️⃣ Vector search (semantic)
+    # ----------------------
+    elif method.lower() == "vector":
+        unique_results = rag.qdrant_query_unique(query, fetch_k=top_k*3) 
+    else:
+        raise ValueError("Invalid search method. Choose 'bm25' or 'vector'.")
+
+    return unique_results
+
 
 # -----------------------------
 # Home / Search page
@@ -47,8 +81,9 @@ def index():
     results = []
     if request.method == "POST":
         query = request.form.get("query", "")
+        method = request.form.get("method",'bm25')
         top_k = int(request.form.get('top_k', 10))
-        results = search(query,top_k=top_k)
+        results = search(query,top_k=top_k,method=method)
     return render_template("index.html", query=query, results=results)
 
 @app.route("/stream", methods=["POST"])

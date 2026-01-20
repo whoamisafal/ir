@@ -77,7 +77,7 @@ def split_docs(documents):
 # -----------------------
 def process_batch(batch_docs):
     chunks = split_docs(batch_docs)
-    rag.add_documents(chunks)
+    rag.add_documents(chunks,chunk_size=500)
     return len(batch_docs)
 
 # -----------------------
@@ -96,7 +96,7 @@ with ThreadPoolExecutor(max_workers=WORKERS) as executor:
         visible_text = doc.get("visible_text", "")
         full_text = f"{title} {description} {keywords} {visible_text}"
 
-        batch_docs.append(Document(page_content=full_text, meta={"url": doc.get("url", "")}))
+        batch_docs.append(Document(page_content=full_text, metadata={"url": doc.get("url", "")}))
         count += 1
 
         if len(batch_docs) == BATCH_SIZE:
@@ -110,5 +110,5 @@ with ThreadPoolExecutor(max_workers=WORKERS) as executor:
     for future in as_completed(futures):
         total_processed += future.result()
 
-print(f"🎉 All documents processed! Total documents: {total_processed}")
+print(f" All documents processed! Total documents: {total_processed}")
 

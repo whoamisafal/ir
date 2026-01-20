@@ -52,3 +52,4 @@ def hybrid_search(query, top_k=5):
         })
 
     return results
+
