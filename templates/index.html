@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ query + " - Nova Search" if query else "Nova AI" }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue: #4285f4; --red: #ea4335; --yellow: #fbbc05; --green: #34a853;
+            --gray: #5f6368; --border: #dfe1e5; --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --ai-purple: #7c4dff;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', arial, sans-serif; margin: 0; color: #202124;
+            background: radial-gradient(circle at 50% -20%, #f0f4ff, #ffffff 80%);
+            min-height: 100vh;
+        }
+
+        /* --- LAYOUT MODES --- */
+        {% if query %}
+        body { overflow-y: scroll; background: #fff; }
+        header { 
+            display: flex; align-items: center; padding: 20px 30px; border-bottom: 1px solid #ebebeb; 
+            position: sticky; top: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); z-index: 100;
+        }
+        main { margin-left: 170px; max-width: 650px; padding: 20px 20px; }
+        .logo { font-size: 24px !important; margin-right: 45px; letter-spacing: -1.5px !important; margin-bottom: 0 !important; }
+        .search-form { width: 100%; max-width: 690px; }
+        .btn-container, footer { display: none; }
+        
+        /* Responsive adjustments for Search State */
+        @media (max-width: 900px) {
+            header { flex-direction: column; align-items: flex-start; padding: 15px; }
+            .logo { margin-bottom: 15px !important; }
+            main { margin-left: 0; margin: 0 auto; padding: 20px; }
+        }
+        {% else %}
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .logo { font-size: 96px; font-weight: 600; margin-bottom: 35px; letter-spacing: -5px; }
+        .search-form { width: 100%; max-width: 584px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Responsive adjustments for Home State */
+        @media (max-width: 600px) {
+            .logo { font-size: 60px; letter-spacing: -2px; }
+        }
+        {% endif %}
+
+        .logo { user-select: none; cursor: pointer; font-weight: 700; transition: 0.2s; white-space: nowrap; }
+        .logo span:nth-child(1) { color: var(--blue); }
+        .logo span:nth-child(2) { color: var(--red); }
+        .logo span:nth-child(3) { color: var(--yellow); }
+        .logo span:nth-child(4) { color: var(--blue); }
+        .logo span:nth-child(5) { color: var(--green); }
+        .logo span:nth-child(6) { color: var(--red); }
+
+        .search-box {
+            display: flex; align-items: center; border: 1px solid var(--border);
+            border-radius: 28px; padding: 5px 20px; background: #fff; transition: box-shadow 0.3s ease;
+            width: 100%;
+        }
+        .search-box:hover, .search-box:focus-within { box-shadow: var(--shadow); border-color: transparent; }
+        input[type="text"] { flex: 1; border: none; outline: none; height: 40px; font-size: 16px; background: transparent; min-width: 0; }
+
+        .search-controls { display: flex; align-items: center; gap: 15px; border-left: 1px solid #eee; padding-left: 15px; margin-left: 10px; }
+        select { border: none; background: #f8f9fa; border-radius: 4px; font-size: 12px; cursor: pointer; outline: none; padding: 2px; }
+
+        /* --- AI BOX --- */
+        .ai-box {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f3f0ff 100%);
+            border-radius: 20px; padding: 24px; margin-bottom: 30px;
+            border: 1px solid rgba(124, 77, 255, 0.1); min-height: 100px;
+            width: 100%;
+        }
+        .ai-tag { color: var(--ai-purple); font-weight: 600; font-size: 12px; margin-bottom: 8px; display: block; }
+        .ai-content { line-height: 1.6; font-size: 15px; color: #3c4043; white-space: pre-wrap; word-wrap: break-word; }
+        .ai-content:after { content: '▋'; animation: blink 1s step-start infinite; color: var(--ai-purple); }
+        .ai-content.done:after { display: none; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .result { margin-bottom: 35px; animation: fadeIn 0.5s ease; width: 100%; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+        .result cite { display: block; font-size: 14px; color: #202124; font-style: normal; margin-bottom: 4px; word-break: break-all; }
+        .result a { font-size: 20px; color: #1a0dab; text-decoration: none; display: block; margin-bottom: 3px; }
+        .result a:hover { text-decoration: underline; }
+        .snippet { font-size: 14px; color: #4d5156; line-height: 1.58; }
+
+        .btn-container { margin-top: 30px; display: flex; gap: 12px; justify-content: center; }
+        .btn { background: #f8f9fa; border: 1px solid #f8f9fa; border-radius: 4px; padding: 10px 16px; cursor: pointer; font-size: 14px; white-space: nowrap; }
+        
+        footer { position: fixed; bottom: 0; width: 100%; background: #f2f2f2; font-size: 14px; }
+        .footer-row { padding: 15px 30px; border-top: 1px solid #dadce0; color: var(--gray); }
+
+        @media (max-width: 480px) {
+            .search-controls { display: none; } /* Hide extra controls on very small phones to save space */
+            .footer-row { flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+        }
+    </style>
+</head>
+<body class="{{ 'results-state' if query else 'home-state' }}">
+
+<header>
+    <div class="logo" onclick="window.location.href='/'">
+        <span>N</span><span>o</span><span>v</span><span>a</span><span>A</span><span>I</span>
+    </div>
+
+    <form class="search-form" method="POST">
+        <div class="search-box">
+            <svg style="width:20px;height:20px;flex-shrink:0;color:#9aa0a6;margin-right:10px" fill="currentColor" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" name="query" value="{{ query if query else '' }}" autofocus autocomplete="off" placeholder="Ask Nova anything...">
+            
+            <div class="search-controls">
+                <select name="top_k">
+                    <option value="5" {% if top_k == 5 %}selected{% endif %}>Top 5</option>
+                    <option value="10" {% if top_k == 10 or not top_k %}selected{% endif %}>Top 10</option>
+                    <option value="25" {% if top_k == 25 %}selected{% endif %}>Top 25</option>
+                </select>
+            </div>
+        </div>
+        {% if not query %}
+        <div class="btn-container">
+            <button type="submit" class="btn">Nova Search</button>
+            <button type="button" class="btn">I'm Feeling Lucky</button>
+        </div>
+        {% endif %}
+    </form>
+</header>
+
+<main>
+    {% if query %}
+        <div class="ai-box">
+            <span class="ai-tag">✨ AI OVERVIEW</span>
+            <div class="ai-content" id="ai-response-text">Thinking...</div>
+        </div>
+
+        {% for r in results %}
+        <div class="result">
+            <cite>{{ r.url[:100] }}</cite>
+            <a href="{{r.url}}">{{ r.title[:200] }}</a>
+            <div class="snippet">
+                {% if r.description and r.description.strip() %}
+                    {{ r.description[:280] }}...
+                {% else  %}
+                    {{ r.visible_text[:280] }}...
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not results %}
+        <p>No documents matched <b>{{ query }}</b>.</p>
+        {% endif %}
+    {% endif %}
+</main>
+
+{% if not query %}
+<footer>
+    <div class="footer-row" style="border:none">Nepal</div>
+    <div class="footer-row" style="display:flex; justify-content: space-between;">
+        <div style="display:flex; gap:25px"><span>About</span><span>Business</span></div>
+        <div style="display:flex; gap:25px"><span>Privacy</span><span>Terms</span></div>
+    </div>
+</footer>
+{% endif %}
+
+{% if query  %}
+<script>
+    async function initStream() {
+        const target = document.getElementById('ai-response-text');
+        try {
+            const response = await fetch('/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: {{ query | tojson }} })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            target.innerText = ""; 
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                target.innerText += decoder.decode(value, { stream: true });
+            }
+            target.classList.add('done');
+        } catch (e) {
+            target.innerText = "Error: Connection lost.";
+        }
+    }
+    document.addEventListener('DOMContentLoaded', initStream);
+</script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,7 @@
+batches
+data
+search_index.jsonl
+venv
+.env
+index.jsonl
+new_inverted_index.json

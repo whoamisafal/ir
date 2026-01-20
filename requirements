@@ -1,0 +1,8 @@
+langchain
+langchain-google-genai
+langchain-qdrant
+qdrant-client
+fastembed
+pypdf
+langchain-cerebras
+waitress
